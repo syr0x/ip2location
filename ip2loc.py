@@ -21,7 +21,7 @@ processNum = sys.argv[3]
 # Function run by worker processes
 #
 def runMasscan(iprange):
-    savedFile = '//Users//jonathan//shodanwave//masscan//' + str(iprange)+'.txt'
+    savedFile = 'output path' + str(iprange)+'.txt'
     process = subprocess.Popen(["masscan","-p22", str(iprange), "--rate=4000", '-oG', savedFile], stdout=subprocess.PIPE)
     output, error = process.communicate()
     status = process.wait()
