@@ -5,7 +5,8 @@ import subprocess
 import pycountry as pc
 import multiprocessing
 import time
-
+import shutil
+import glob
 
 if len(sys.argv) != 4:
     print('Usage:' + sys.argv[0] + ' <country>' + ' <ipverse||ip2location> ' + '<process>')
@@ -16,6 +17,9 @@ country = sys.argv[1]
 source = sys.argv[2]
 processNum = sys.argv[3]
 
+#
+# Function run by worker processes
+#
 def runMasscan(iprange):
     savedFile = '//Users//jonathan//shodanwave//masscan//' + str(iprange)+'.txt'
     process = subprocess.Popen(["masscan","-p22", str(iprange), "--rate=4000", '-oG', savedFile], stdout=subprocess.PIPE)
@@ -39,11 +43,13 @@ def worker(work, function, return_dict):
 
 class Multiprocessing:
     @staticmethod
+    # Create queues
     def main(workers, work_set, my_function):
         manager = multiprocessing.Manager()
         return_dict = manager.dict()
         work = manager.Queue()
 
+        # Submit tasks
         for w in work_set:
             work.put(w)
 
@@ -68,6 +74,17 @@ class Multiprocessing:
                     continue
                 alive_process = False
         return return_dict
+
+
+def copyFile():
+    outFilename = (country + '.txt')
+    with open(outFilename, 'wb') as outfile:
+        for filename in glob.glob('*.txt'):
+            if filename == outFilename:
+                # don't want to copy the output into the output
+                continue
+            with open(filename, 'rb') as readfile:
+                shutil.copyfileobj(readfile, outfile)
 
 
 def getLines(soupObj):
@@ -129,6 +146,8 @@ if __name__ == "__main__":
     soupObj = parsePage(link)
     ipRanges = getLines(soupObj)
     ret = Multiprocessing.main(int(processNum), ipRanges, runMasscan)
+    copyFile()
+    runUpdate()
 
 
 
