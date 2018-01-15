@@ -7,6 +7,7 @@ import multiprocessing
 import time
 import shutil
 import glob
+import os
 
 if len(sys.argv) != 4:
     print('Usage:' + sys.argv[0] + ' <country>' + ' <ipverse||ip2location> ' + '<process>')
@@ -17,15 +18,12 @@ country = sys.argv[1]
 source = sys.argv[2]
 processNum = sys.argv[3]
 
-#
 # Function run by worker processes
-#
 def runMasscan(iprange):
-    savedFile = '//Users//jonathan//shodanwave//masscan//' + str(iprange)+'.txt'
+    savedFile = str(iprange)+'.txt'
     process = subprocess.Popen(["masscan","-p22", str(iprange), "--rate=4000", '-oG', savedFile], stdout=subprocess.PIPE)
     output, error = process.communicate()
     status = process.wait()
-    print(output)
     return status, output
 
 
@@ -77,14 +75,22 @@ class Multiprocessing:
 
 
 def copyFile():
-    outFilename = (country + '.txt')
+    os.makedirs(country, exist_ok=True)
+    outFilename = (country + "//" + country + '.txt')
     with open(outFilename, 'wb') as outfile:
         for filename in glob.glob('*.txt'):
-            if filename == outFilename:
-                # don't want to copy the output into the output
-                continue
             with open(filename, 'rb') as readfile:
-                shutil.copyfileobj(readfile, outfile)
+                for line in readfile:
+                    line = (line.strip().decode()) + "\n"
+                    outfile.write(line.encode())
+    return outFilename
+
+
+
+
+def runUpdate():
+    os.system("grep -oP '(?<=Host: )\S*' "+ country +".txt > mfu.txt")
+    return False
 
 
 def getLines(soupObj):
@@ -146,8 +152,9 @@ if __name__ == "__main__":
     soupObj = parsePage(link)
     ipRanges = getLines(soupObj)
     ret = Multiprocessing.main(int(processNum), ipRanges, runMasscan)
-    copyFile()
-    runUpdate()
+    out = copyFile()
+    runUpdate(out)
+
 
 
 
