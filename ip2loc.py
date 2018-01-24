@@ -5,9 +5,9 @@ import subprocess
 import pycountry as pc
 import multiprocessing
 import time
-import shutil
 import glob
 import os
+import tqdm
 
 if len(sys.argv) != 4:
     print('Usage:' + sys.argv[0] + ' <country>' + ' <ipverse||ip2location> ' + '<process>')
@@ -22,9 +22,9 @@ processNum = sys.argv[3]
 def runMasscan(iprange):
     savedFile = str(iprange)+'.txt'
     process = subprocess.Popen(["masscan","-p22", str(iprange), "--rate=4000", '-oG', savedFile], stdout=subprocess.PIPE)
-    output, error = process.communicate()
+    #output, error = process.communicate()
     status = process.wait()
-    return status, output
+    return status
 
 
 def worker(work, function, return_dict):
@@ -51,15 +51,19 @@ class Multiprocessing:
         for w in work_set:
             work.put(w)
 
+        pbar = tqdm.tqdm(total=work.qsize())
         processes = []
         for unused_index in range(workers):
             process = multiprocessing.Process(target=worker, args=(work, my_function, return_dict,))
             processes.append(process)
             process.start()
 
+        total = work.qsize() + 1
         while not work.empty():
-            #print(work.qsize())
-            time.sleep(0.1)
+            if total != work.qsize():
+                pbar.update(1)
+                time.sleep(0.1)
+                total = work.qsize()
             continue
 
 
@@ -88,8 +92,11 @@ def copyFile():
 
 
 
-def runUpdate():
-    os.system("grep -oP '(?<=Host: )\S*' "+ country +".txt > mfu.txt")
+def runUpdate(path):
+    os.system("rm *.txt -f")
+    print("[+] FINISH PARSE COUNTRY FILES ")
+    os.system("grep -oP '(?<=Host: )\S*' "+ path +".txt > mfu.txt")
+    print("[+] FINISHED RUN ./UPDATE OR ./GO TO BRUTE THEM --------------")
     return False
 
 
@@ -105,11 +112,6 @@ def getLines(soupObj):
                 elif int(key[3].replace(',', '')) > 256:
                     key = (key[1] + "-" + key[2])
                     ipRanges.append(key)
-
-
-        # for ip in ipRanges:
-        #     ip = ip.replace("\n", " ")
-        #     print(ip)
 
         else:
             content = soupObj.get_text()
@@ -154,10 +156,3 @@ if __name__ == "__main__":
     ret = Multiprocessing.main(int(processNum), ipRanges, runMasscan)
     out = copyFile()
     runUpdate(out)
-
-
-
-
-
-
-
